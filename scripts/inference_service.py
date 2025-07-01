@@ -29,7 +29,7 @@ from gr00t.model.policy import Gr00tPolicy
 class ArgsConfig:
     """Command line arguments for the inference service."""
 
-    model_path: str = "nvidia/GR00T-N1.5-3B"
+    model_path: str = "/mnt/petrelfs/zhangjinyu/model_zoo/nvidia/GR00T-N1.5-3B"
     """Path to the model checkpoint directory."""
 
     embodiment_tag: Literal[tuple(EMBODIMENT_TAG_MAPPING.keys())] = "gr1"

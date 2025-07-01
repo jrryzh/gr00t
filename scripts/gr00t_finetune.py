@@ -16,9 +16,10 @@
 import os
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import List, Literal
+import json
 
 import torch
 import tyro
@@ -57,11 +58,11 @@ class ArgsConfig:
     num_gpus: int = 1
     """Number of GPUs to use for training."""
 
-    save_steps: int = 1000
+    save_steps: int = 5000 # 1000
     """Number of steps between saving checkpoints."""
 
     # Model parameters
-    base_model_path: str = "nvidia/GR00T-N1.5-3B"
+    base_model_path: str = "/mnt/petrelfs/zhangjinyu/model_zoo/nvidia/GR00T-N1.5-3B"
     """Path or HuggingFace model ID for the base model."""
 
     tune_llm: bool = False
@@ -130,6 +131,13 @@ class ArgsConfig:
 
 def main(config: ArgsConfig):
     """Main training function."""
+    # 保存 config 到 output_dir
+    os.makedirs(config.output_dir, exist_ok=True)
+    config_path = os.path.join(config.output_dir, "config.json")
+    with open(config_path, "w") as f:
+        json.dump(asdict(config), f, indent=2)
+    print(f"Config saved to {config_path}")
+
     # ------------ step 1: load dataset ------------
     embodiment_tag = EmbodimentTag(config.embodiment_tag)
 

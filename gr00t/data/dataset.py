@@ -314,6 +314,13 @@ class LeRobotSingleDataset(Dataset):
                 # channels = le_video_meta["shape"][le_video_meta["names"].index("channels")]
                 channels = le_video_meta["info"]["video.channels"]
                 fps = le_video_meta["info"]["video.fps"]
+            # TODO:jinqiu used this block below, may check later
+            # try:
+            #     channels = le_video_meta["shape"][le_video_meta["names"].index("channel")]
+            #     fps = le_video_meta["info"]["video.fps"]
+            # except ValueError:
+            #     channels = le_video_meta["shape"][le_video_meta["names"].index("channels")]
+            #     fps = le_video_meta["info"]["video.fps"]
             simplified_modality_meta["video"][new_key] = {
                 "resolution": [width, height],
                 "channels": channels,

@@ -42,7 +42,7 @@ dependencies = [
     "tianshou==0.5.1",
     "timm==1.0.14",
     "tqdm==4.67.1",
-    "transformers==4.51.3", # TODO: check if this will break the model (used for qwen3)
+    "transformers==4.51.3", # TODO: check if this will break the model (used for qwen3) 4.51.3 4.45.2
     "typing_extensions==4.12.2",
     "pyarrow==14.0.1",
     "wandb==0.18.0",
