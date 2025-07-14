@@ -12,11 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import debugpy 
+# import debugpy 
 
-debugpy.listen(("0.0.0.0", 10092))  # 监听端口 
-print("Waiting for debugger to attach...")
-debugpy.wait_for_client()  # 等待 VS Code 附加
+# debugpy.listen(("0.0.0.0", 10092))  # 监听端口 
+# print("Waiting for debugger to attach...")
+# debugpy.wait_for_client()  # 等待 VS Code 附加
 
 import warnings
 from dataclasses import dataclass, field
