@@ -53,9 +53,6 @@ class ArgsConfig:
     denoising_steps: int = 4
     """The number of denoising steps to use."""
 
-    api_token: str = None
-    """API token for authentication. If not provided, authentication is disabled."""
-
 
 #####################################################################################
 
@@ -116,22 +113,24 @@ def main(args: ArgsConfig):
         # - action: action.left_hand: (16, 6)
         # - action: action.right_hand: (16, 6)
         # - action: action.waist: (16, 3)
-        obs = {
-            "video.ego_view": np.random.randint(0, 256, (1, 256, 256, 3), dtype=np.uint8),
-            "state.left_arm": np.random.rand(1, 7),
-            "state.right_arm": np.random.rand(1, 7),
-            "state.left_hand": np.random.rand(1, 6),
-            "state.right_hand": np.random.rand(1, 6),
-            "state.waist": np.random.rand(1, 3),
-            "annotation.human.action.task_description": ["do your thing!"],
-        }
+        while True:
+            obs = {
+                "video.ego_view": np.random.randint(0, 256, (1, 256, 256, 3), dtype=np.uint8),
+                "state.left_arm": np.random.rand(1, 7),
+                "state.right_arm": np.random.rand(1, 7),
+                "state.left_hand": np.random.rand(1, 6),
+                "state.right_hand": np.random.rand(1, 6),
+                "state.waist": np.random.rand(1, 3),
+                "annotation.human.action.task_description": ["do your thing!"],
+            }
 
-        time_start = time.time()
-        action = policy_client.get_action(obs)
-        print(f"Total time taken to get action from server: {time.time() - time_start} seconds")
+            time_start = time.time()
+            action = policy_client.get_action(obs)
+            print(f"Total time taken to get action from server: {time.time() - time_start} seconds")
 
-        for key, value in action.items():
-            print(f"Action: {key}: {value.shape}")
+            for key, value in action.items():
+                # print(f"Action: {key}: {value}")
+                pass
 
     else:
         raise ValueError("Please specify either --server or --client")

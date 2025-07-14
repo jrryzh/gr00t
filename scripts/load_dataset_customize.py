@@ -18,6 +18,7 @@ This script is a replication of the notebook `getting_started/load_dataset.ipynb
 """
 
 import json
+import os
 import pathlib
 import time
 from dataclasses import dataclass, field
@@ -91,89 +92,224 @@ def get_modality_keys(dataset_path: pathlib.Path) -> dict[str, list[str]]:
     return modality_dict
 
 
+# def plot_state_action_space(
+#     state_dict: dict[str, np.ndarray],
+#     action_dict: dict[str, np.ndarray],
+#     shared_keys: list[str] = ["left_arm", "right_arm", "left_hand", "right_hand"],
+# ):
+#     """
+#     Plot the state and action space side by side.
+
+#     state_dict: dict[str, np.ndarray] with key: [Time, Dimension]
+#     action_dict: dict[str, np.ndarray] with key: [Time, Dimension]
+#     shared_keys: list[str] of keys to plot (without the "state." or "action." prefix)
+#     """
+#     # Create a figure with one subplot per shared key
+#     fig = plt.figure(figsize=(16, 4 * len(shared_keys)))
+
+#     # Create GridSpec to organize the layout
+#     gs = fig.add_gridspec(len(shared_keys), 1)
+
+#     # Color palette for different dimensions
+#     colors = plt.cm.tab10.colors
+
+#     for i, key in enumerate(shared_keys):
+#         state_key = f"state.{key}"
+#         action_key = f"action.{key}"
+
+#         # Skip if either key is not in the dictionaries
+#         if state_key not in state_dict or action_key not in action_dict:
+#             print(
+#                 f"Warning: Skipping {key} as it's not found in both state and action dictionaries"
+#             )
+#             continue
+
+#         # Get the data
+#         state_data = state_dict[state_key]
+#         action_data = action_dict[action_key]
+
+#         print(f"{state_key}.shape: {state_data.shape}")
+#         print(f"{action_key}.shape: {action_data.shape}")
+
+#         # Create subplot
+#         ax = fig.add_subplot(gs[i, 0])
+
+#         # Plot each dimension with a different color
+#         # Determine the minimum number of dimensions to plot
+#         min_dims = min(state_data.shape[1], action_data.shape[1])
+
+#         for dim in range(min_dims):
+#             # Create time arrays for both state and action
+#             state_time = np.arange(len(state_data))
+#             action_time = np.arange(len(action_data))
+
+#             # State with dashed line
+#             ax.plot(
+#                 state_time,
+#                 state_data[:, dim],
+#                 "--",
+#                 color=colors[dim % len(colors)],
+#                 linewidth=1.5,
+#                 label=f"state dim {dim}",
+#             )
+
+#             # Action with solid line (same color as corresponding state dimension)
+#             ax.plot(
+#                 action_time,
+#                 action_data[:, dim],
+#                 "-",
+#                 color=colors[dim % len(colors)],
+#                 linewidth=2,
+#                 label=f"action dim {dim}",
+#             )
+
+#         ax.set_title(f"{key}")
+#         ax.set_xlabel("Time")
+#         ax.set_ylabel("Value")
+#         ax.grid(True, linestyle=":", alpha=0.7)
+
+#         # Create a more organized legend
+#         handles, labels = ax.get_legend_handles_labels()
+#         # Sort the legend so state and action for each dimension are grouped
+#         by_label = dict(zip(labels, handles))
+#         ax.legend(by_label.values(), by_label.keys(), loc="upper right")
+
+#     plt.tight_layout()
+
+
+def _plot_space(
+    data_dict: dict[str, np.ndarray],
+    keys: list[str],
+    title_prefix: str,
+    linestyle: str,
+    colors,
+):
+    """内部工具函数：画单一数据源（state 或 action）。"""
+    fig = plt.figure(figsize=(16, 4 * len(keys)))
+    gs = fig.add_gridspec(len(keys), 1)
+
+    for i, key in enumerate(keys):
+        if key not in data_dict:          # 跳过缺失键
+            print(f"Warning: {key} not in data_dict, skip")
+            continue
+
+        data = data_dict[key]
+        ax = fig.add_subplot(gs[i, 0])
+
+        time_arr = np.arange(len(data))
+        for dim in range(data.shape[1]):
+            ax.plot(
+                time_arr,
+                data[:, dim],
+                linestyle,
+                color=colors[dim % len(colors)],
+                linewidth=1.5,
+                label=f"{title_prefix} dim {dim}",
+            )
+        ax.set_title(key)
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Value")
+        ax.grid(True, linestyle=":", alpha=0.7)
+        ax.legend(loc="upper right")
+
+    plt.tight_layout()
+    return fig
+
+
+def plot_state_space(
+    state_dict: dict[str, np.ndarray],
+    shared_keys: list[str] = ("left_arm", "right_arm", "left_hand", "right_hand"),
+):
+    """仅绘制 state 空间。"""
+    colors = plt.cm.tab10.colors
+    state_keys = [f"state.{k}" for k in shared_keys]
+    return _plot_space(state_dict, state_keys, "state", "--", colors)
+
+
+def plot_action_space(
+    action_dict: dict[str, np.ndarray],
+    shared_keys: list[str] = ("left_arm", "right_arm", "left_hand", "right_hand"),
+):
+    """仅绘制 action 空间。"""
+    colors = plt.cm.tab10.colors
+    action_keys = [f"action.{k}" for k in shared_keys]
+    return _plot_space(action_dict, action_keys, "action", "-", colors)
+
+
 def plot_state_action_space(
     state_dict: dict[str, np.ndarray],
     action_dict: dict[str, np.ndarray],
-    shared_keys: list[str] = ["left_arm", "right_arm", "left_hand", "right_hand"],
+    shared_keys: list[str] = ("left_arm", "right_arm", "left_hand", "right_hand"),
 ):
     """
-    Plot the state and action space side by side.
-
-    state_dict: dict[str, np.ndarray] with key: [Time, Dimension]
-    action_dict: dict[str, np.ndarray] with key: [Time, Dimension]
-    shared_keys: list[str] of keys to plot (without the "state." or "action." prefix)
+    同时绘制 state 与 action（同色区分虚实线）。
     """
-    # Create a figure with one subplot per shared key
     fig = plt.figure(figsize=(16, 4 * len(shared_keys)))
-
-    # Create GridSpec to organize the layout
     gs = fig.add_gridspec(len(shared_keys), 1)
-
-    # Color palette for different dimensions
     colors = plt.cm.tab10.colors
 
     for i, key in enumerate(shared_keys):
-        state_key = f"state.{key}"
-        action_key = f"action.{key}"
-
-        # Skip if either key is not in the dictionaries
-        if state_key not in state_dict or action_key not in action_dict:
-            print(
-                f"Warning: Skipping {key} as it's not found in both state and action dictionaries"
-            )
+        s_key, a_key = f"state.{key}", f"action.{key}"
+        if s_key not in state_dict or a_key not in action_dict:
+            print(f"Warning: Skipping {key} (state/action key missing)")
             continue
 
-        # Get the data
-        state_data = state_dict[state_key]
-        action_data = action_dict[action_key]
-
-        print(f"{state_key}.shape: {state_data.shape}")
-        print(f"{action_key}.shape: {action_data.shape}")
-
-        # Create subplot
+        s_data, a_data = state_dict[s_key], action_dict[a_key]
+        
         ax = fig.add_subplot(gs[i, 0])
 
-        # Plot each dimension with a different color
-        # Determine the minimum number of dimensions to plot
-        min_dims = min(state_data.shape[1], action_data.shape[1])
+        # 保证维度一致
+        min_dims = min(s_data.shape[1], a_data.shape[1])
+        s_time = np.arange(len(s_data))
+        a_time = np.arange(len(a_data))
 
-        for dim in range(min_dims):
-            # Create time arrays for both state and action
-            state_time = np.arange(len(state_data))
-            action_time = np.arange(len(action_data))
-
-            # State with dashed line
+        for d in range(min_dims):
             ax.plot(
-                state_time,
-                state_data[:, dim],
+                s_time,
+                s_data[:, d],
                 "--",
-                color=colors[dim % len(colors)],
+                color=colors[d % len(colors)],
                 linewidth=1.5,
-                label=f"state dim {dim}",
+                label=f"state dim {d}",
             )
-
-            # Action with solid line (same color as corresponding state dimension)
             ax.plot(
-                action_time,
-                action_data[:, dim],
+                a_time,
+                a_data[:, d],
                 "-",
-                color=colors[dim % len(colors)],
+                color=colors[d % len(colors)],
                 linewidth=2,
-                label=f"action dim {dim}",
+                label=f"action dim {d}",
             )
 
-        ax.set_title(f"{key}")
+        ax.set_title(key)
         ax.set_xlabel("Time")
         ax.set_ylabel("Value")
         ax.grid(True, linestyle=":", alpha=0.7)
 
-        # Create a more organized legend
+        # 合并同色虚实线的图例
         handles, labels = ax.get_legend_handles_labels()
-        # Sort the legend so state and action for each dimension are grouped
         by_label = dict(zip(labels, handles))
         ax.legend(by_label.values(), by_label.keys(), loc="upper right")
 
     plt.tight_layout()
+    return fig
+
+
+def plot_all_spaces(state_dict, action_dict, shared_keys, out_dir="./figs", prefix="exp1"):
+    os.makedirs(out_dir, exist_ok=True)
+
+    figs = {
+        f"{prefix}_state.png":  plot_state_space(state_dict,  shared_keys),
+        f"{prefix}_action.png": plot_action_space(action_dict, shared_keys),
+        f"{prefix}_state_action.png": plot_state_action_space(state_dict, action_dict, shared_keys),
+    }
+
+    # 逐个保存
+    for fname, fig in figs.items():
+        path = os.path.join(out_dir, fname)
+        fig.savefig(path, dpi=150)
+        plt.close(fig)          # 及时释放内存
+    print(f"Saved figures to {os.path.abspath(out_dir)}")
 
 
 def plot_image(image: np.ndarray):
@@ -339,10 +475,12 @@ def load_dataset(
     #     plot_state_action_space(state_dict, action_dict)
     #     print("Plotted state and action space")
     if plot_state_action:
-        plot_state_action_space(state_dict, action_dict, shared_keys=["arm", "gripper"])
-        plt.savefig("tmp/state_action_plot.png")
+        # plot_state_action_space(state_dict, action_dict, shared_keys=["arm", "gripper"])
+        # plt.savefig("tmp/state_action_plot.png")
+        # plt.close()
+        plot_all_spaces(state_dict, action_dict, shared_keys=["arm", "gripper"], out_dir="figs", prefix="exp1")
         print("Plotted and saved state and action space")
-        plt.close()
+        
 
     if plot_image:
         fig, axs = plt.subplots(4, total_images // 4, figsize=(20, 10))
