@@ -59,7 +59,7 @@ class ArgsConfig:
     """Data configuration name from DATA_CONFIG_MAP."""
 
     # Training parameters
-    batch_size: int = 96 # 60G memory
+    batch_size: int = 32 # 60G memory
     """Batch size per GPU for training."""
 
     max_steps: int = 10000
@@ -145,6 +145,9 @@ class ArgsConfig:
 
     master_port: int = int(os.getenv("MASTER_PORT", 29500))
     """Rendezvous master port."""
+    
+    deepspeed_config: str = ""
+    """Deepspeed config file."""
 
 #####################################################################################
 # main training function
@@ -236,7 +239,7 @@ def main(config: ArgsConfig):
         output_dir=config.output_dir,
         run_name=None,
         remove_unused_columns=False,
-        deepspeed="",
+        deepspeed=config.deepspeed_config,
         gradient_checkpointing=False,
         bf16=True,
         tf32=True,
@@ -278,75 +281,6 @@ def main(config: ArgsConfig):
 
     # 2.3 run experiment
     experiment.train()
-
-
-# if __name__ == "__main__":
-#     # Parse arguments using tyro
-#     config = tyro.cli(ArgsConfig)
-
-#     # Print the tyro config
-#     print("\n" + "=" * 50)
-#     print("GR00T FINE-TUNING CONFIGURATION:")
-#     print("=" * 50)
-#     for key, value in vars(config).items():
-#         print(f"{key}: {value}")
-#     print("=" * 50 + "\n")
-
-#     available_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 1
-
-#     # Validate GPU configuration
-#     assert (
-#         config.num_gpus <= available_gpus
-#     ), f"Number of GPUs requested ({config.num_gpus}) is greater than the available GPUs ({available_gpus})"
-#     assert config.num_gpus > 0, "Number of GPUs must be greater than 0"
-#     print(f"Using {config.num_gpus} GPUs")
-
-#     if config.num_gpus == 1:
-#         # Single GPU mode - set CUDA_VISIBLE_DEVICES=0
-#         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-#         # Run the script normally
-#         main(config)
-#     else:
-#         if os.environ.get("IS_TORCHRUN", "0") == "1":
-#             main(config)
-#         else:
-#             # Multi-GPU mode - use torchrun
-#             script_path = Path(__file__).absolute()
-#             # Remove any existing CUDA_VISIBLE_DEVICES from environment
-#             if "CUDA_VISIBLE_DEVICES" in os.environ:
-#                 del os.environ["CUDA_VISIBLE_DEVICES"]
-
-#             # Use subprocess.run instead of os.system
-#             cmd = [
-#                 "torchrun",
-#                 "--standalone",
-#                 f"--nproc_per_node={config.num_gpus}",
-#                 "--nnodes=1",  # default to 1 node for now
-#                 str(script_path),
-#             ]
-
-#             # Convert config to command line arguments
-#             for key, value in vars(config).items():
-#                 if isinstance(value, bool):
-#                     # For boolean values, use --flag or --no-flag format
-#                     if value:
-#                         cmd.append(f"--{key.replace('_', '-')}")
-#                     else:
-#                         cmd.append(f"--no-{key.replace('_', '-')}")
-#                 else:
-#                     # For non-boolean values, use --key value format
-#                     cmd.append(f"--{key.replace('_', '-')}")
-
-#                     # if the value is a list (e.g. dataset_path), we need to add each element in the list
-#                     if isinstance(value, list):
-#                         for v in value:
-#                             cmd.append(str(v))
-#                     else:
-#                         cmd.append(str(value))
-#             print("Running torchrun command: ", cmd)
-#             env = os.environ.copy()
-#             env["IS_TORCHRUN"] = "1"
-#             sys.exit(subprocess.run(cmd, env=env).returncode)
 
 import os, sys, subprocess, time
 from pathlib import Path

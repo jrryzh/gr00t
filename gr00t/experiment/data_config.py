@@ -1010,23 +1010,16 @@ class SingleGenManipPandaGripperDataConfig(BaseDataConfig):
 
 class SingleRobotiqGripperDataConfig(BaseDataConfig):
     video_keys = [
-        "video.left_view",
-        "video.right_view",
+        "video.first_view",
         "video.wrist_view",
     ]
     state_keys = [
-        "state.end_effector_position_relative",
-        "state.end_effector_rotation_relative",
-        "state.gripper_qpos",
-        "state.base_position",
-        "state.base_rotation",
+        "state.ee_state",
     ]
     action_keys = [
-        "action.end_effector_position",
-        "action.end_effector_rotation",
-        "action.gripper_close",
-        "action.base_motion",
-        "action.control_mode",
+        "action.ee_delta_rot",
+        "action.ee_delta_trans",
+        "action.gripper_close"
     ]
 
     language_keys = ["annotation.human.action.task_description"]
@@ -1077,28 +1070,25 @@ class SingleRobotiqGripperDataConfig(BaseDataConfig):
             StateActionTransform(
                 apply_to=self.state_keys,
                 normalization_modes={
-                    "state.end_effector_position_relative": "min_max",
-                    "state.end_effector_rotation_relative": "min_max",
-                    "state.gripper_qpos": "min_max",
-                    "state.base_position": "min_max",
-                    "state.base_rotation": "min_max",
+                    "state.ee_state": "min_max",
                 },
-                target_rotations={
-                    "state.end_effector_rotation_relative": "rotation_6d",
-                    "state.base_rotation": "rotation_6d",
-                },
+                # target_rotations={
+                #     "state.end_effector_rotation_relative": "rotation_6d",
+                #     "state.base_rotation": "rotation_6d",
+                # },
             ),
             # action transforms
             StateActionToTensor(apply_to=self.action_keys),
             StateActionTransform(
                 apply_to=self.action_keys,
                 normalization_modes={
-                    "action.end_effector_position": "min_max",
-                    "action.end_effector_rotation": "min_max",
-                    "action.gripper_close": "binary",
-                    "action.base_motion": "min_max",
-                    "action.control_mode": "binary",
+                    "action.ee_delta_rot": "min_max",
+                    "action.ee_delta_trans": "min_max",
+                    "action.gripper_close": "binary"
                 },
+                # target_rotations={
+                #     "action.ee_delta_rot": "rotation_6d",
+                # }
             ),
             # concat transforms
             ConcatTransform(
@@ -1127,6 +1117,7 @@ DATA_CONFIG_MAP = {
     "bimanual_panda_hand": BimanualPandaHandDataConfig(),
     "single_panda_gripper": SinglePandaGripperDataConfig(),
     "gemanip": SingleGenManipPandaGripperDataConfig(),
+    "franka_robotiq": SingleRobotiqGripperDataConfig(),
     "so100": So100DataConfig(),
     "so100_dualcam": So100DualCamDataConfig(),
     "unitree_g1": UnitreeG1DataConfig(),

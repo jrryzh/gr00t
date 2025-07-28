@@ -1,0 +1,21 @@
+{
+    "train_micro_batch_size_per_gpu": "auto",      
+    "gradient_accumulation_steps": "auto",         
+  
+    "zero_optimization": {
+      "stage": 2,                             
+      "allgather_bucket_size": 5e8,           
+      "reduce_scatter": true,                 
+      "overlap_comm": true,                   
+      "contiguous_gradients": true            
+    },
+  
+    "bf16": { "enabled": true },              
+    "activation_checkpointing": {
+      "partition_activations": false          
+    },
+  
+    "wall_clock_breakdown": false,
+    "checkpoint": { "tag": "latest", "save_interval": 10000 }
+  }
+  

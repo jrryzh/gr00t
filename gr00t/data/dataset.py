@@ -107,8 +107,10 @@ class LeRobotSingleDataset(Dataset):
         modality_configs: dict[str, ModalityConfig],
         embodiment_tag: str | EmbodimentTag,
         video_backend: str = "decord",
+        tolerance_s: float = 1e-4,
         video_backend_kwargs: dict | None = None,
         transforms: ComposedModalityTransform | None = None,
+        augsteps: int = 10,
     ):
         """
         Initialize the dataset.
@@ -119,19 +121,29 @@ class LeRobotSingleDataset(Dataset):
                 See `ModalityConfig` for more details.
             video_backend (str): Backend for video reading.
             video_backend_kwargs (dict): Keyword arguments for the video backend when initializing the video reader.
+            tolerance_s (float, optional): Tolerance in seconds used to ensure data timestamps are actually in sync with the fps value. 
+                It is used at the init of the dataset to make sure that each timestamps is separated to the next by 1/fps +/- tolerance_s. 
+                This also applies to frames decoded from video files. It is also used to check that `delta_timestamps` (when provided) are multiples of 1/fps. Defaults to 1e-4.
             transforms (ComposedModalityTransform): The transforms to apply to the dataset.
             embodiment_tag (EmbodimentTag): Overload the embodiment tag for the dataset. e.g. define it as "new_embodiment"
+            augsteps (int): The number of steps to augment. If 0, no augmentation is applied.
         """
         # first check if the path directory exists
         if not Path(dataset_path).exists():
             raise FileNotFoundError(f"Dataset path {dataset_path} does not exist")
-
+        self.tolerance_s = tolerance_s
         self.modality_configs = modality_configs
         self.video_backend = video_backend
         self.video_backend_kwargs = video_backend_kwargs if video_backend_kwargs is not None else {}
-        self.transforms = (
-            transforms if transforms is not None else ComposedModalityTransform(transforms=[])
-        )
+        self.augstep_ = augsteps>0
+        self.augsteps = augsteps
+        # 如果传入的是列表，需要包装成 ComposedModalityTransform
+        if transforms is None:
+            self.transforms = ComposedModalityTransform(transforms=[])
+        elif isinstance(transforms, list):
+            self.transforms = ComposedModalityTransform(transforms=transforms)
+        else:
+            self.transforms = transforms
 
         self._dataset_path = Path(dataset_path)
         self._dataset_name = self._dataset_path.name
@@ -139,6 +151,17 @@ class LeRobotSingleDataset(Dataset):
             self.tag = embodiment_tag.value
         else:
             self.tag = embodiment_tag
+
+        # Move lerobot-config to the front
+        # LeRobot-specific config
+        self._lerobot_modality_meta = self._get_lerobot_modality_meta()
+        self._lerobot_info_meta = self._get_lerobot_info_meta()
+        self._data_path_pattern = self._get_data_path_pattern()
+        self._video_path_pattern = self._get_video_path_pattern()
+        self._chunk_size = self._get_chunk_size()
+        self._tasks = self._get_tasks()
+        self.curr_traj_data = None
+        self.curr_traj_id = None
 
         self._metadata = self._get_metadata(EmbodimentTag(self.tag))
         self._trajectory_ids, self._trajectory_lengths = self._get_trajectories()
@@ -149,16 +172,6 @@ class LeRobotSingleDataset(Dataset):
         self.set_epoch(0)
 
         print(f"Initialized dataset {self.dataset_name} with {embodiment_tag}")
-
-        # LeRobot-specific config
-        self._lerobot_modality_meta = self._get_lerobot_modality_meta()
-        self._lerobot_info_meta = self._get_lerobot_info_meta()
-        self._data_path_pattern = self._get_data_path_pattern()
-        self._video_path_pattern = self._get_video_path_pattern()
-        self._chunk_size = self._get_chunk_size()
-        self._tasks = self._get_tasks()
-        self.curr_traj_data = None
-        self.curr_traj_id = None
 
         # Check if the dataset is valid
         self._check_integrity()
@@ -307,20 +320,27 @@ class LeRobotSingleDataset(Dataset):
             height = le_video_meta["shape"][le_video_meta["names"].index("height")]
             width = le_video_meta["shape"][le_video_meta["names"].index("width")]
             # NOTE(FH): different lerobot dataset versions have different keys for the number of channels and fps
-            try:
-                channels = le_video_meta["shape"][le_video_meta["names"].index("channel")]
-                fps = le_video_meta["video_info"]["video.fps"]
-            except (ValueError, KeyError):
-                # channels = le_video_meta["shape"][le_video_meta["names"].index("channels")]
-                channels = le_video_meta["info"]["video.channels"]
-                fps = le_video_meta["info"]["video.fps"]
-            # TODO:jinqiu used this block below, may check later
+            # try:
+            #     channels = le_video_meta["shape"][le_video_meta["names"].index("channel")]
+            #     fps = le_video_meta["video_info"]["video.fps"]
+            # except (ValueError, KeyError):
+            #     # channels = le_video_meta["shape"][le_video_meta["names"].index("channels")]
+            #     channels = le_video_meta["info"]["video.channels"]
+            #     fps = le_video_meta["info"]["video.fps"]
+            # TODO: may check later
+            # DEBUG: print(le_video_meta)
+            # print("DEBUG: le_video_meta")
+            # print(le_video_meta.keys())
+            # import ipdb; ipdb.set_trace()
             # try:
             #     channels = le_video_meta["shape"][le_video_meta["names"].index("channel")]
             #     fps = le_video_meta["info"]["video.fps"]
             # except ValueError:
             #     channels = le_video_meta["shape"][le_video_meta["names"].index("channels")]
             #     fps = le_video_meta["info"]["video.fps"]
+            # HACK: use predefined for 3L real demonstrations
+            channels = 3
+            fps = 30
             simplified_modality_meta["video"][new_key] = {
                 "resolution": [width, height],
                 "channels": channels,
@@ -399,6 +419,60 @@ class LeRobotSingleDataset(Dataset):
         for trajectory_id, trajectory_length in zip(self.trajectory_ids, self.trajectory_lengths):
             for base_index in range(trajectory_length):
                 all_steps.append((trajectory_id, base_index))
+            if self.augstep_:
+                chunk_index = self.get_episode_chunk(trajectory_id) # id//chunk-size
+                parquet_path = self.dataset_path / self.data_path_pattern.format(
+                    episode_chunk=chunk_index, episode_index=trajectory_id
+                )
+                assert parquet_path.exists(), f"Parquet file not found at {parquet_path}"
+                data = pd.read_parquet(parquet_path)
+                le_state_or_action_cfg = getattr(self.lerobot_modality_meta, 'action')
+                change_indices = set()
+                values = []
+                # from IPython import embed; embed()
+                for key in self._get_modality_keys()['action']: # iteration
+                    subkey = key.split('.')
+                    if 'gripper' in subkey:
+                        # le_key = le_state_or_action_cfg[subkey].original_key if 'action'!=le_state_or_action_cfg[subkey].original_key else le_state_or_action_cfg[subkey].original_key + "." + subkey
+                        le_key = "action"
+                        value = data[le_key].to_numpy().tolist()
+                        values.append(value)
+                    elif 'gripper_close' in subkey:
+                        le_key = "ee_action"
+                        value = data[le_key].to_numpy().tolist()
+                        values.append(value)
+                ## JINYU IMPLEMENTATION AUGMENTATION
+                if values != []:
+                    values = values[0]
+                    for i in range(len(values)-2):
+                        flag = [
+                            np.array_equal(values[i][-1],   values[i+1][-1]) and
+                            np.array_equal(values[i+1][-1], values[i+2][-1])
+                        ]
+                        if not all(flag):
+                            change_indices.update((i, i+1, i+2))
+                            # print(f"value {i} {i+1} {i+2}:", values[i][-1], values[i+1][-1], values[i+2][-1]) 
+                    # print("change_indices: ", change_indices)
+                    for change_index in change_indices:
+                        for i in range(self.augsteps):
+                            all_steps.append((trajectory_id, change_index))
+                else:
+                    print(f"No action-gripper data found for trajectory {trajectory_id} in {parquet_path}. Skipping augmentation.")
+                # if values != []:
+                #     for i in range(len(values[0]) - 2):
+                #         flag = [
+                #             np.array_equal(values[j][i],   values[j][i+1]) and
+                #             np.array_equal(values[j][i+1], values[j][i+2])
+                #             for j in range(len(values))
+                #         ]
+                #         if not all(flag):
+                #             change_indices.update((i, i+1, i+2))
+                #     print("change_indices: ", change_indices)
+                #     for change_index in change_indices:
+                #         for i in range(self.augsteps):
+                #             all_steps.append((trajectory_id, change_index))
+                # else:
+                #     print(f"No action-gripper data found for trajectory {trajectory_id} in {parquet_path}. Skipping augmentation.")
         return all_steps
 
     def _get_modality_keys(self) -> dict:

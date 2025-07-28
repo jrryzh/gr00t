@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import shutil
 from pathlib import Path
 
@@ -20,8 +21,23 @@ import torch
 from transformers import Trainer, TrainerCallback
 
 
-def safe_save_model_for_hf_trainer(trainer: Trainer, output_dir: str):
+def safe_save_model_for_hf_trainer(trainer: Trainer, output_dir: str, save_weights_only: bool = False):
     """Collects the state dict and dump to disk."""
+    # HACK: only save weights
+    if save_weights_only:
+        # 只保存权重
+        if trainer.deepspeed:
+            torch.cuda.synchronize()
+            state_dict = trainer.accelerator.get_state_dict(trainer.deepspeed)
+        else:
+            state_dict = trainer.model.state_dict()
+        
+        if trainer.args.should_save:
+            weights_path = os.path.join(output_dir, "model_weights.pth")
+            torch.save(state_dict, weights_path)
+            print(f"Model weights saved to: {weights_path}")
+        return
+    
     if trainer.deepspeed:
         torch.cuda.synchronize()
         trainer.save_model(output_dir, _internal_call=True)

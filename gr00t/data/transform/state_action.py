@@ -390,6 +390,10 @@ class StateActionTransform(InvertibleModalityTransform):
         # Check that all state keys specified in apply_to have their modality_metadata
         for key in self.apply_to:
             split_key = key.split(".")
+            # DEBUG:
+            if len(split_key) != 2:
+                print(split_key)
+                import ipdb; ipdb.set_trace()
             assert len(split_key) == 2, "State keys should have two parts: 'modality.key'"
             if key not in self.modality_metadata:
                 modality, state_key = split_key

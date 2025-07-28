@@ -68,6 +68,9 @@ class ArgsConfig:
 
     save_path: str = "minmax_longrange_ball.png"
     """Path to save the dataset images."""
+    
+    debug: bool = False
+    """Enable debug mode for verbose output."""
 
 
 #####################################################################################
@@ -331,6 +334,7 @@ def load_dataset(
     plot_state_action: bool = False,
     plot_image: bool = False,
     save_path: str = "dataset_images.png",
+    debug: bool = False,
 ):
     assert len(dataset_path) > 0, "dataset_path must be a list of at least one path"
 
@@ -434,6 +438,14 @@ def load_dataset(
             print(f"{key}: {value.shape}")
         else:
             print(f"{key}: {value}")
+            
+    if debug:
+        from IPython import embed; embed()
+        for i,d in enumerate(dataset):
+            if i % 30 == 0:
+                print(d["action.gripper"])
+        exit(0)
+        
 
     # 6. plot the first 100 images
     images_list = []
@@ -503,4 +515,5 @@ if __name__ == "__main__":
         config.plot_state_action,
         config.plot_image,
         config.save_path,
+        config.debug,
     )
