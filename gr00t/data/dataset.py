@@ -135,6 +135,8 @@ class LeRobotSingleDataset(Dataset):
         self.modality_configs = modality_configs
         self.video_backend = video_backend
         self.video_backend_kwargs = video_backend_kwargs if video_backend_kwargs is not None else {}
+        # JINYU: aug & resample
+        self.resample = True
         self.augstep_ = augsteps>0
         self.augsteps = augsteps
         # 如果传入的是列表，需要包装成 ComposedModalityTransform
@@ -417,8 +419,12 @@ class LeRobotSingleDataset(Dataset):
         """
         all_steps: list[tuple[int, int]] = []
         for trajectory_id, trajectory_length in zip(self.trajectory_ids, self.trajectory_lengths):
-            for base_index in range(trajectory_length):
-                all_steps.append((trajectory_id, base_index))
+            if not self.resample:
+                for base_index in range(trajectory_length):
+                    all_steps.append((trajectory_id, base_index))
+            else:
+                for base_index in range(trajectory_length):
+                    if 
             if self.augstep_:
                 chunk_index = self.get_episode_chunk(trajectory_id) # id//chunk-size
                 parquet_path = self.dataset_path / self.data_path_pattern.format(
