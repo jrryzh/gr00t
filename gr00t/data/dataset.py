@@ -419,12 +419,8 @@ class LeRobotSingleDataset(Dataset):
         """
         all_steps: list[tuple[int, int]] = []
         for trajectory_id, trajectory_length in zip(self.trajectory_ids, self.trajectory_lengths):
-            if not self.resample:
-                for base_index in range(trajectory_length):
-                    all_steps.append((trajectory_id, base_index))
-            else:
-                for base_index in range(trajectory_length):
-                    if 
+            for base_index in range(trajectory_length):
+                all_steps.append((trajectory_id, base_index))
             if self.augstep_:
                 chunk_index = self.get_episode_chunk(trajectory_id) # id//chunk-size
                 parquet_path = self.dataset_path / self.data_path_pattern.format(
