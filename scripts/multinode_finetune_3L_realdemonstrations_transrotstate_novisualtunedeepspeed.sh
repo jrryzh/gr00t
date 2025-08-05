@@ -17,7 +17,7 @@ export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # ---- wandb ----
 export WANDB_PROJECT="3L_realdemonstrations"
-export WANDB_RUN_ID="3L_realdemonstrations_bs48_deepspeed"
+export WANDB_RUN_ID="multinode_finetune_3L_realdemonstrations_transrotstate_novisualtune_bs48_deepspeed"
 
 # ---------- 进入项目并激活环境 ----------
 cd /mnt/petrelfs/zhangjinyu/code_repo/Isaac-GR00T
@@ -37,10 +37,10 @@ srun torchrun \
   scripts/gr00t_finetune_multinode.py \
     --deepspeed-config $DS_CONFIG \
     --num_gpus 8 \
-    --data_config franka_robotiq \
+    --data_config franka_ee_robotiq_v2 \
     --dataset-path data/demonstrations_lerobot/3L_real_demonstrations \
-    --output-dir ./logs/multinode_finetune_3L_real_demonstrations_localfinetune_deepspeed \
+    --output-dir ./logs/multinode_finetune_3L_realdemonstrations_transrotstate_novisualtune_bs48_deepspeed \
     --batch_size 48 \
     --save-steps 5000 \
-    --max-steps 50000
+    --max-steps 60000
 

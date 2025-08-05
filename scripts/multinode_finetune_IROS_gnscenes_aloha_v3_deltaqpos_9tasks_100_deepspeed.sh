@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J 3L_realdemonstrations
+#SBATCH -J IROS_aloha_v3_9tasks_100_deepspeed
 #SBATCH -p efm_p
 #SBATCH -N 2
 #SBATCH --ntasks-per-node=1
@@ -16,8 +16,8 @@ export NCCL_SOCKET_IFNAME=bond0           # 视机房网卡名而定
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # ---- wandb ----
-export WANDB_PROJECT="3L_realdemonstrations"
-export WANDB_RUN_ID="3L_realdemonstrations_bs48_deepspeed"
+export WANDB_PROJECT="gr00t_finetune_IROS_gnscenes_aloha_v3_9tasks"
+export WANDB_RUN_ID="gr00t_finetune_IROS_gnscenes_aloha_v3_deltaqpos_9tasks_deepspeed"
 
 # ---------- 进入项目并激活环境 ----------
 cd /mnt/petrelfs/zhangjinyu/code_repo/Isaac-GR00T
@@ -37,10 +37,16 @@ srun torchrun \
   scripts/gr00t_finetune_multinode.py \
     --deepspeed-config $DS_CONFIG \
     --num_gpus 8 \
-    --data_config franka_robotiq \
-    --dataset-path data/demonstrations_lerobot/3L_real_demonstrations \
-    --output-dir ./logs/multinode_finetune_3L_real_demonstrations_localfinetune_deepspeed \
+    --dataset-path data/demonstrations_lerobot/aloha_v3_final/aloha_brush_paint_split_1_h264_v3_final \
+    data/demonstrations_lerobot/aloha_v3_final/aloha_colorful_cups_split_1_h264_v3_final \
+    data/demonstrations_lerobot/aloha_v3_final/aloha_ocr_box_split_1_h264_v3_final \
+    data/demonstrations_lerobot/aloha_v3_final/aloha_select_drink_split_1_h264_v3_final \
+    data/demonstrations_lerobot/aloha_v3_final/aloha_waste_split_split_1_h264_v3_final \
+    data/demonstrations_lerobot/aloha_v3_final/aloha_object_select1_split_1_h264_v3_final \
+    data/demonstrations_lerobot/aloha_v3_final/aloha_object_select2_split_1_h264_v3_final \
+    data/demonstrations_lerobot/aloha_v3_final/aloha_object_select4_split_1_h264_v3_final \
+    --data_config aloha \
+    --output-dir ./logs/multinode_finetune_IROS_gnscenes_aloha_v3_deltaqpos_9tasks_100_deepspeed \
     --batch_size 48 \
     --save-steps 5000 \
     --max-steps 50000
-
