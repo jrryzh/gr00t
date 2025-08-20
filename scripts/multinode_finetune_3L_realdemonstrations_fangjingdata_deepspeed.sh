@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J 3L_realdemonstrations
+#SBATCH -J fangjingdata
 #SBATCH -p efm_p
-#SBATCH -N 4
+#SBATCH -N 2
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=128
 #SBATCH --gres=gpu:8
@@ -16,8 +16,8 @@ export NCCL_SOCKET_IFNAME=bond0           # 视机房网卡名而定
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # ---- wandb ----
-export WANDB_PROJECT="3L_realdemonstrations"
-export WANDB_RUN_ID="multinode_finetune_3L_realdemonstrations_transrotstate_fullfinetune_bs48_deepspeed"
+export WANDB_PROJECT="3L_realdemonstrations_fangjingdata"
+export WANDB_RUN_ID="3L_realdemonstrations_bs48_deepspeed"
 
 # ---------- 进入项目并激活环境 ----------
 cd /mnt/petrelfs/zhangjinyu/code_repo/Isaac-GR00T
@@ -37,12 +37,10 @@ srun torchrun \
   scripts/gr00t_finetune_multinode.py \
     --deepspeed-config $DS_CONFIG \
     --num_gpus 8 \
-    --data_config franka_ee_robotiq_v2 \
-    --dataset-path data/demonstrations_lerobot/3L_real_demonstrations \
-    --output-dir ./logs/multinode_finetune_3L_realdemonstrations_transrotstate_fullfinetune_bs48_deepspeed \
-    --tune_visual \
-    --tune_llm \
+    --data_config 3L_real \
+    --dataset-path /mnt/petrelfs/share/zhangjinyu/genmanip/demonstrations_lerobot_/3L_short_pick_place_merge \
+    --output-dir ./logs/3L_real_demonstrations_fangjingdata_deepspeed \
     --batch_size 48 \
     --save-steps 5000 \
-    --max-steps 60000
+    --max-steps 50000
 

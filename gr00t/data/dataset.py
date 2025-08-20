@@ -137,7 +137,7 @@ class LeRobotSingleDataset(Dataset):
         self.video_backend_kwargs = video_backend_kwargs if video_backend_kwargs is not None else {}
         # JINYU: aug & resample
         self.resample = True
-        self.augstep_ = augsteps>0
+        self.augstep_ = False # HACK: ban augstep for now
         self.augsteps = augsteps
         # 如果传入的是列表，需要包装成 ComposedModalityTransform
         if transforms is None:

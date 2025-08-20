@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -J 3L_realdemonstrations
 #SBATCH -p efm_p
-#SBATCH -N 4
+#SBATCH -N 2
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=128
 #SBATCH --gres=gpu:8
@@ -42,7 +42,7 @@ srun torchrun \
     --output-dir ./logs/multinode_finetune_3L_realdemonstrations_transrotstate_fullfinetune_bs48_deepspeed \
     --tune_visual \
     --tune_llm \
-    --batch_size 48 \
+    --batch_size 24 \
     --save-steps 5000 \
     --max-steps 60000
 

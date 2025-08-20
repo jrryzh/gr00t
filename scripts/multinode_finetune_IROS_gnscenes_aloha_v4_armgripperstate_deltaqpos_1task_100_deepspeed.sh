@@ -1,7 +1,8 @@
 #!/bin/bash
-#SBATCH -J 3L_realdemonstrations
+#!/bin/bash
+#SBATCH -J armgripperstate_deltaqpos_1tasks_deepspeed
 #SBATCH -p efm_p
-#SBATCH -N 4
+#SBATCH -N 2
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=128
 #SBATCH --gres=gpu:8
@@ -16,8 +17,8 @@ export NCCL_SOCKET_IFNAME=bond0           # 视机房网卡名而定
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # ---- wandb ----
-export WANDB_PROJECT="3L_realdemonstrations"
-export WANDB_RUN_ID="multinode_finetune_3L_realdemonstrations_transrotstate_fullfinetune_bs48_deepspeed"
+export WANDB_PROJECT="IROS_gr00t_aloha_chanllenge"
+export WANDB_RUN_ID="armgripperstate_deltaqpos_1tasks_deepspeed"
 
 # ---------- 进入项目并激活环境 ----------
 cd /mnt/petrelfs/zhangjinyu/code_repo/Isaac-GR00T
@@ -35,14 +36,10 @@ srun torchrun \
   --rdzv_id $SLURM_JOB_ID \
   --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT \
   scripts/gr00t_finetune_multinode.py \
-    --deepspeed-config $DS_CONFIG \
     --num_gpus 8 \
-    --data_config franka_ee_robotiq_v2 \
-    --dataset-path data/demonstrations_lerobot/3L_real_demonstrations \
-    --output-dir ./logs/multinode_finetune_3L_realdemonstrations_transrotstate_fullfinetune_bs48_deepspeed \
-    --tune_visual \
-    --tune_llm \
-    --batch_size 48 \
-    --save-steps 5000 \
-    --max-steps 60000
-
+    --dataset-path data/demonstrations_lerobot/IROS_C_Aloha_lerobot/sort_waste_split_1_h264_v4 \
+    --data_config aloha_gripper_arm_state \
+    --output-dir ./logs/IROS_gr00t_aloha_chanllenge_armgripperstate_deltaqpos_sortwaste_deepspeed \
+    --batch_size 36 \
+    --save-steps 2500 \
+    --max-steps 7500

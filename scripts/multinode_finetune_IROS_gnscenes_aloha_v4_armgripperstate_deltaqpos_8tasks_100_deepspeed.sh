@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH -J 3L_realdemonstrations
+#SBATCH -J armgripperstate_deltaqpos_8tasks_deepspeed
 #SBATCH -p efm_p
-#SBATCH -N 4
+#SBATCH -N 2
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=128
 #SBATCH --gres=gpu:8
@@ -16,8 +16,8 @@ export NCCL_SOCKET_IFNAME=bond0           # 视机房网卡名而定
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # ---- wandb ----
-export WANDB_PROJECT="3L_realdemonstrations"
-export WANDB_RUN_ID="multinode_finetune_3L_realdemonstrations_transrotstate_fullfinetune_bs48_deepspeed"
+export WANDB_PROJECT="IROS_gr00t_aloha_chanllenge"
+export WANDB_RUN_ID="armgripperstate_deltaqpos_8tasks_deepspeed"
 
 # ---------- 进入项目并激活环境 ----------
 cd /mnt/petrelfs/zhangjinyu/code_repo/Isaac-GR00T
@@ -37,12 +37,16 @@ srun torchrun \
   scripts/gr00t_finetune_multinode.py \
     --deepspeed-config $DS_CONFIG \
     --num_gpus 8 \
-    --data_config franka_ee_robotiq_v2 \
-    --dataset-path data/demonstrations_lerobot/3L_real_demonstrations \
-    --output-dir ./logs/multinode_finetune_3L_realdemonstrations_transrotstate_fullfinetune_bs48_deepspeed \
-    --tune_visual \
-    --tune_llm \
+    --dataset-path data/demonstrations_lerobot/IROS_C_Aloha_lerobot/collect_three_glues_split_1_h264_v4 \
+    data/demonstrations_lerobot/IROS_C_Aloha_lerobot/collect_two_alarm_clocks_split_1_h264_v4 \
+    data/demonstrations_lerobot/IROS_C_Aloha_lerobot/collect_two_shoes_split_1_h264_v4 \
+    data/demonstrations_lerobot/IROS_C_Aloha_lerobot/gather_two_teaboxes_split_1_h264_v4 \
+    data/demonstrations_lerobot/IROS_C_Aloha_lerobot/oil_painting_recognition_split_1_h264_v4 \
+    data/demonstrations_lerobot/IROS_C_Aloha_lerobot/organize_colorful_cups_split_1_h264_v4 \
+    data/demonstrations_lerobot/IROS_C_Aloha_lerobot/purchase_gift_box_split_1_h264_v4 \
+    data/demonstrations_lerobot/IROS_C_Aloha_lerobot/put_drink_on_basket_split_1_h264_v4 \
+    --data_config aloha_gripper_arm_state \
+    --output-dir ./logs/IROS_gr00t_aloha_chanllenge_armgripperstate_deltaqpos_8tasks_deepspeed \
     --batch_size 48 \
     --save-steps 5000 \
-    --max-steps 60000
-
+    --max-steps 50000
